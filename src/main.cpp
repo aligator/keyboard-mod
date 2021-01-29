@@ -133,11 +133,6 @@ void loop() {
   for (int i=0; i<numLeds; i++) {
     uint32_t newColor = leds[i].color;
 
-    Serial.println(leds[i].name);
-    Serial.println(i);
-    Serial.println(leds[i].input);
-    Serial.println(leds[i].overrideInverted);
-
     bool input = digitalRead(leds[i].input);
     if (leds[i].overrideInverted) {
       input = !input;
@@ -146,11 +141,6 @@ void loop() {
     if (input == LOW && !leds[i].isForced) {
       newColor = leds[i].overrideColor;
     }
-
-    Serial.println(newColor);
-
-
-    pixels->setPixelColor(i, newColor);
   }
 
   pixels->show();
