@@ -4,10 +4,12 @@
 // Configurable values:
 // Make sure that all the arrays are of the same length!
 int pixelBus = 6;
-int ledInputs[] = {2, 3, 4};
-String ledNames[] = {"NUM", "SHIFT", "FLOCK"};
+float brightnessScale = 0.6;
+int ledInputs[] = {3, 2, 4};
+String ledNames[] = { "FLOCK", "SHIFT", "NUM" };
 uint32_t ledColors[] = {0, 0, 0};
 uint32_t overrideColors[] = {0, 0, 0};
+bool overrideInverse[] = {true, false, false};
 bool ledForced[] = {false, false, false};
 
 int pixelFormat = NEO_GRB + NEO_KHZ800;
@@ -20,7 +22,7 @@ void setup() {
   Serial.begin(9600);
 
   numPixels = sizeof(ledInputs) / sizeof(int);
-  if (numPixels != sizeof(ledColors) / sizeof(uint32_t) || numPixels != sizeof(ledForced) / sizeof(bool) || numPixels != sizeof(ledNames) / sizeof(String)) {
+  if (numPixels != sizeof(ledColors) / sizeof(uint32_t) || numPixels != sizeof(ledForced) / sizeof(bool) || numPixels != sizeof(overrideInverse) / sizeof(bool) || numPixels != sizeof(ledNames) / sizeof(String)) {
     Serial.println("ledInputs, ledColors, ledNames and ledForced have to be of the same length");
   }
 
@@ -35,6 +37,7 @@ void setup() {
     pinMode(ledInputs[i], INPUT_PULLUP);
     overrideColors[i] = pixels->Color(0, 0, 150);
   }
+  Serial.println("Started...");
 }
 
 void loop() {
@@ -76,9 +79,13 @@ void loop() {
         String b = incomingComand.substring(4, 6);
 
         uint32_t newColor = pixels->Color(
-          (uint8_t) strtol(r.c_str(), 0, 16),
-          (uint8_t) strtol(g.c_str(), 0, 16),
-          (uint8_t) strtol(b.c_str(), 0, 16));
+          (uint8_t) strtol(r.c_str(), 0, 16) * brightnessScale,
+          (uint8_t) strtol(g.c_str(), 0, 16) * brightnessScale,
+          (uint8_t) strtol(b.c_str(), 0, 16) * brightnessScale);
+        
+        Serial.println((uint8_t) strtol(r.c_str(), 0, 16) * brightnessScale);
+        Serial.println((uint8_t) strtol(g.c_str(), 0, 16) * brightnessScale);
+        Serial.println((uint8_t) strtol(b.c_str(), 0, 16) * brightnessScale);
 
         if (setOverrideColor) {
           overrideColors[i] = newColor;
@@ -105,7 +112,12 @@ void loop() {
   for (int i=0; i<numPixels; i++) {
     pixels->setPixelColor(i, ledColors[i]);
 
-    if (digitalRead(ledInputs[i]) == LOW && !ledForced[i]) {
+    bool input = digitalRead(ledInputs[i]);
+    if (overrideInverse[i]) {
+      input = !input;
+    }
+
+    if (input == LOW && !ledForced[i]) {
       pixels->setPixelColor(i, overrideColors[i]);
     }
   }
