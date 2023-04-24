@@ -1,9 +1,10 @@
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
+#include <ArduinoJson.h>
 
 struct LedData {
   int input;
-  String name;
+  String id;
   uint32_t color;
   uint32_t overrideColor;
   bool overrideInverted;
@@ -15,10 +16,10 @@ struct LedData {
 int pixelBus = 6;
 float brightnessScale = 0.6;
 
-LedData leds[] = {
+LedData ledConfig[] = {
   LedData{
     input: 3,
-    name: "FLOCK",
+    id: "FLOCK",
     color: 0,
     overrideColor: 150,
     overrideInverted: true,
@@ -26,7 +27,7 @@ LedData leds[] = {
   },
   LedData{
     input: 2,
-    name: "SHIFT",
+    id: "SHIFT",
     color: 0,
     overrideColor:  150,
     overrideInverted: false,
@@ -34,7 +35,7 @@ LedData leds[] = {
   },
   LedData{
     input: 4,
-    name: "NUM",
+    id: "NUM",
     color: 0,
     overrideColor:  150,
     overrideInverted: false,
@@ -51,7 +52,7 @@ int numLeds = 0;
 void setup() {
   Serial.begin(9600);
 
-  numLeds = sizeof(leds) / sizeof(LedData);
+  numLeds = sizeof(ledConfig) / sizeof(LedData);
 
   Serial.setTimeout(30000);
 
@@ -59,7 +60,7 @@ void setup() {
   pixels->begin();
 
   for (int i=0; i<numLeds; i++) {
-    pinMode(leds[i].input, INPUT_PULLUP);
+    pinMode(ledConfig[i].input, INPUT_PULLUP);
   }
 
   Serial.println("Started...");
@@ -72,8 +73,25 @@ void loop() {
     String status = "";
     String ledName = "";
 
+    // Send own capabilities as json.
+    if (incomingComand.startsWith("hello")) {
+      DynamicJsonDocument doc(1024);
+      doc["name"] = "keyboard-mod";
+      doc["version"] = "0.1.0";
+      JsonArray leds = doc.createNestedArray("leds");
+      for (int i=0; i<numLeds; i++) {
+        JsonObject led = leds.createNestedObject();
+        led["id"] = ledConfig[i].id;
+      }
+      
+
+      Serial.print("OK: hello ");
+      Serial.println("" + serializeJson(doc, Serial));
+      return;
+    }
+
     for (int i=0; i<numLeds; i++) {
-      if (!incomingComand.startsWith(leds[i].name)) {
+      if (!incomingComand.startsWith(ledConfig[i].id)) {
         // Found no led with that name.
         if (i == numLeds-1) {
           status = "invalid led id";
@@ -81,12 +99,11 @@ void loop() {
         continue;
       }
 
-      ledName = leds[i].name;
+      ledName = ledConfig[i].id;
 
-      incomingComand = incomingComand.substring(leds[i].name.length() + 1);
-      Serial.println(incomingComand);
+      incomingComand = incomingComand.substring(ledConfig[i].id.length() + 1);
       if (incomingComand.startsWith("disable override")) {
-        leds[i].isForced = true;
+        ledConfig[i].isForced = true;
         status = "override disabled";
         ok = true;
         break;
@@ -95,7 +112,7 @@ void loop() {
         if (incomingComand.startsWith("override")) {
           incomingComand = incomingComand.substring(9);
           setOverrideColor = true;
-          leds[i].isForced = false;
+          ledConfig[i].isForced = false;
         }
 
         // Parse the color
@@ -109,10 +126,10 @@ void loop() {
           (uint8_t) strtol(b.c_str(), 0, 16) * brightnessScale);
 
         if (setOverrideColor) {
-          leds[i].overrideColor = newColor;
+          ledConfig[i].overrideColor = newColor;
           status = "override color set";
         } else {
-          leds[i].color = newColor;
+          ledConfig[i].color = newColor;
           status = "color set";
         }
 
@@ -122,7 +139,7 @@ void loop() {
     }
 
     if (ok) {
-      Serial.println("OK: " + ledName + " " + status);
+      Serial.println("OK: set " + ledName + " " + status);
     } else  {
       Serial.println("ERR: " + status);
     }
@@ -131,16 +148,18 @@ void loop() {
   pixels->clear();
 
   for (int i=0; i<numLeds; i++) {
-    uint32_t newColor = leds[i].color;
+    uint32_t newColor = ledConfig[i].color;
 
-    bool input = digitalRead(leds[i].input);
-    if (leds[i].overrideInverted) {
+    bool input = digitalRead(ledConfig[i].input);
+    if (ledConfig[i].overrideInverted) {
       input = !input;
     }
 
-    if (input == LOW && !leds[i].isForced) {
-      newColor = leds[i].overrideColor;
+    if (input == LOW && !ledConfig[i].isForced) {
+      newColor = ledConfig[i].overrideColor;
     }
+
+    pixels->setPixelColor(i, newColor);
   }
 
   pixels->show();

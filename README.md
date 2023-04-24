@@ -38,11 +38,11 @@ The response starts always with `OK: ` or `ERR: ` to indicate if the command was
 As all keyboards are different, there is no "one way", but for mine (an old Logitech Media Keyboard 600), I used the following:
 * An USB 2.0 Hub with a small pcb. I searched on amazon until I found this one. (the original link is down, but you may be able to find similar ones, e.g. [this one](https://www.amazon.de/ZHITING-Spliter-Adapter-Portable-Transfer/dp/B09L821NRH/ref=sr_1_26?__mk_de_DE=%C3%85M%C3%85%C5%BD%C3%95%C3%91&crid=186GPUQ3481I1&keywords=perfk+USB+2.0+Ports+Splitter+Adapter+Hub&qid=1682258382&s=computers&sprefix=perfk+usb+2.0+ports+splitter+adapter+hub%2Ccomputers%2C68&sr=1-26))  
     ![](doc/image/usb.jpg) ![](doc/image/usb_open.jpg)
-* A small arduino capable of emulating a keyboard. I used an Arduino Pro Micro.  
+* A small arduino. I used an Arduino Pro Micro.  
     ![](doc/image/arduino.jpg)
 * 3 (or more) single WS2812B RGB leds. I usually use some from BTF-LIGHTING on amazon, but any compatible brand will do.  
     ![](doc/image/led.jpg)
-* 3 (or more) optocouplers. I used the [A817](https://www.datasheet4u.com/datasheet-pdf/FairchildSemiconductor/A817/pdf.php?id=703678).  
+* 3 (or more) optocouplers to get the signal of the original led outputs of the keyboard. I used the [A817](https://www.datasheet4u.com/datasheet-pdf/FairchildSemiconductor/A817/pdf.php?id=703678).  
     ![](doc/image/opto.jpg)
 * (optional - you could solder directly) 6-pin socket for the optocouplers
 * 3-pin socket for the leds and 6-pin socket for the arduino.
