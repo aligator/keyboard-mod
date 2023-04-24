@@ -83,10 +83,9 @@ void loop() {
         JsonObject led = leds.createNestedObject();
         led["id"] = ledConfig[i].id;
       }
-      
-
       Serial.print("OK: hello ");
       Serial.println("" + serializeJson(doc, Serial));
+      doc.clear();
       return;
     }
 
@@ -139,7 +138,13 @@ void loop() {
     }
 
     if (ok) {
-      Serial.println("OK: set " + ledName + " " + status);
+      DynamicJsonDocument doc(1024);
+      doc["id"] = ledName;
+      doc["status"] = status;
+      
+      Serial.print("OK: set ");
+      Serial.println("" + serializeJson(doc, Serial));
+      doc.clear();
     } else  {
       Serial.println("ERR: " + status);
     }

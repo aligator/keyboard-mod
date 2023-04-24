@@ -19,6 +19,9 @@ func main() {
 		}
 
 		fmt.Println(leds)
+
+		leds.SetColor("FLOCK", 255, 0, 0)
+
 		leds.Wait()
 	} else {
 		// run as a cli

@@ -20,6 +20,11 @@ type ledConfig struct {
 	Leds    []Led  `json:"leds"`
 }
 
+type ledStatus struct {
+	Id     string `json:"id"`
+	Status string `json:"status"`
+}
+
 type Response struct {
 	Ok   bool
 	Type string
@@ -139,6 +144,14 @@ func (l *Leds) handleMessage() {
 			}
 			fmt.Printf("received config: %v\n", cfg)
 			l.Leds = cfg.Leds
+		case "set":
+			status := &ledStatus{}
+			err := json.Unmarshal([]byte(msg.Msg), status)
+			if err != nil {
+				fmt.Printf("could not parse led status: %v\n", err)
+				continue
+			}
+			fmt.Println("set", status)
 		default:
 			fmt.Printf("unknown message type: %v\n", msg.Type)
 		}
@@ -151,9 +164,13 @@ func (l *Leds) hello() error {
 
 func (l *Leds) Send(cmd string) error {
 	_, err := l.stream.Write([]byte(cmd))
-	return checkpoint.From(err)
+	if err != nil {
+		return checkpoint.From(err)
+	}
+	return checkpoint.From(l.stream.Flush())
 }
 
 func (l *Leds) SetColor(name string, r, g, b int) error {
-	return nil
+	// TODO: communicate with json
+	return l.Send(fmt.Sprintf("%v %x%x%x\n", name, r, g, b))
 }
