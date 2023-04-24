@@ -34,8 +34,9 @@ type Response struct {
 type Leds struct {
 	stream *serial.Port
 
-	message chan Response
-	done    chan struct{}
+	message     chan Response
+	done        chan struct{}
+	initialized chan struct{}
 
 	Leds []Led
 }
@@ -56,9 +57,11 @@ func OpenLeds(device string) (*Leds, error) {
 
 	leds.message = make(chan Response, 10)
 	leds.done = make(chan struct{})
+	leds.initialized = make(chan struct{})
 	go leds.handleMessage()
 	go leds.listen()
 
+	<-leds.initialized
 	return leds, checkpoint.From(err)
 }
 
@@ -144,6 +147,7 @@ func (l *Leds) handleMessage() {
 			}
 			fmt.Printf("received config: %v\n", cfg)
 			l.Leds = cfg.Leds
+			close(l.initialized)
 		case "set":
 			status := &ledStatus{}
 			err := json.Unmarshal([]byte(msg.Msg), status)

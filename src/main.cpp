@@ -66,6 +66,8 @@ void setup() {
   Serial.println("Started...");
 }
 
+DynamicJsonDocument doc(1024);
+
 void loop() {
   if (Serial.available() > 0) {
     String incomingComand = Serial.readStringUntil('\n');
@@ -75,7 +77,8 @@ void loop() {
 
     // Send own capabilities as json.
     if (incomingComand.startsWith("hello")) {
-      DynamicJsonDocument doc(1024);
+      doc.clear();
+
       doc["name"] = "keyboard-mod";
       doc["version"] = "0.1.0";
       JsonArray leds = doc.createNestedArray("leds");
@@ -84,12 +87,14 @@ void loop() {
         led["id"] = ledConfig[i].id;
       }
       Serial.print("OK: hello ");
-      Serial.println("" + serializeJson(doc, Serial));
-      doc.clear();
+      serializeJson(doc, Serial);
+      Serial.println();
+      Serial.flush();
       return;
     }
 
     for (int i=0; i<numLeds; i++) {
+      status = "";
       if (!incomingComand.startsWith(ledConfig[i].id)) {
         // Found no led with that name.
         if (i == numLeds-1) {
@@ -138,15 +143,23 @@ void loop() {
     }
 
     if (ok) {
-      DynamicJsonDocument doc(1024);
+      doc.clear();
       doc["id"] = ledName;
       doc["status"] = status;
       
       Serial.print("OK: set ");
-      Serial.println("" + serializeJson(doc, Serial));
-      doc.clear();
+      serializeJson(doc, Serial);
+      Serial.println();
+      Serial.flush();
     } else  {
-      Serial.println("ERR: " + status);
+      doc.clear();
+      doc["id"] = ledName;
+      doc["status"] = status;
+      
+      Serial.print("ERR: ");
+      serializeJson(doc, Serial);
+      Serial.println();
+      Serial.flush();
     }
   }
 
