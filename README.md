@@ -22,8 +22,7 @@ As all keyboards are different, there is no "one way", but for mine (an old Logi
     ![](doc/image/led.jpg)
 * 3 (or more) optocouplers to get the signal of the original led outputs of the keyboard. I used the [A817](https://www.datasheet4u.com/datasheet-pdf/FairchildSemiconductor/A817/pdf.php?id=703678).  
     ![](doc/image/opto.jpg)
-* (optional - you could solder directly) 6-pin socket for the optocouplers
-* 3-pin socket for the leds and 6-pin socket for the arduino.
+* (optional - you could solder directly) 8-pin socket for the optocouplers
 
 # Wiring
 The basic idea is to replace the existing leds with the optocouplers, to send a signal to the arduino when the keyboard wants to enable an led.
@@ -31,5 +30,5 @@ Then the arduino can control the new rgb leds directly.
 
 Also because the USB-Hub has an additional output, I just added a new USB port to the keyboard. However as I only work with USB 2.0 and I have to power the keyboard and arduino with it, the USB port cannot handle high current. For simple USB sticks it is enough.
 
-## Diagram
+## Schematic
 ![](doc/image/schema.svg)
