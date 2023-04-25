@@ -4,15 +4,24 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/aligator/keyboard-mod/core/led"
+	"github.com/aligator/keyboard-mod/daemon/led"
+	"github.com/aligator/keyboard-mod/daemon/web"
 )
 
 func main() {
-	daemon := flag.Bool("d", false, "Run as a deamon")
+	daemon := flag.Bool("d", false, "Run as a daemon")
+	host := flag.String("host", "", "Host to listen on for the web ui and the rest api. If empty, the web server will not be started. Example: localhost:8080")
 	flag.Parse()
 
 	if *daemon {
-		leds, err := led.OpenLeds("/dev/ttyACM1")
+
+		device := flag.Arg(0)
+		if device == "" {
+			fmt.Fprintf(flag.CommandLine.Output(), "You have to provide a device path as argument\n")
+			return
+		}
+
+		leds, err := led.OpenLeds(device)
 
 		if err != nil {
 			panic(err)
@@ -20,11 +29,14 @@ func main() {
 
 		fmt.Println(leds)
 
-		leds.SetColor("FLOCK", 255, 0, 0)
-		leds.SetColor("SHIFT", 0, 255, 0)
-		leds.SetColor("NUM", 0, 0, 255)
+		if *host != "" {
+			// Start the embedded web ui
+			go func() {
+				panic(web.ListenAndServe(*host, leds))
+			}()
+		}
 
-		leds.Wait()
+		panic(leds.Run())
 	} else {
 		// run as a cli
 	}

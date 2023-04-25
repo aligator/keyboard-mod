@@ -1,0 +1,52 @@
+<script>
+fetch("http://localhost:8080/api/leds", {
+    method: 'GET',
+    headers: {
+        'Accept': 'application/json',
+    },
+})
+.then(response => response.json())
+.then((data) => {
+    // Set the data to the element
+    console.log(data)
+    document.getElementById("leds").innerHTML = JSON.stringify(data);
+})
+
+function setColor() {
+    console.log("setColor")
+
+    // Get the selected id 
+    var e = document.getElementById("ids");
+    var id = e.options[e.selectedIndex].value;
+    // Get the color
+    var color = document.getElementById("color").value;
+    // Convert to hex to int
+    color = parseInt(color, 16);
+
+    fetch(`http://localhost:8080/api/leds/${id}`, {
+        method: 'PATCH',
+        headers: {
+            'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+            color: color,
+        })
+    })
+    .then(response => response.json())
+    .then((data) => {
+        // Set the data to the element
+        console.log(data)
+        document.getElementById("leds").innerHTML = JSON.stringify(data);
+    })
+}
+</script>
+
+<div id="leds"></div>
+<label for="ids">LED:</label>
+<select name="ids" id="ids">
+  <option value="NUM">NUM</option>
+  <option value="SHIFT">SHIFT</option>
+  <option value="FLOCK">FLOCK</option>
+</select> 
+#<input type="text" id="color" name="color" value="ff0000" />
+<button onclick="setColor()">Set color</button>

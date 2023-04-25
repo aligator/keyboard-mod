@@ -5,24 +5,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/aligator/checkpoint"
 	"github.com/tarm/serial"
 )
 
 type Led struct {
-	Id string `json:"id"`
+	Id            string `json:"id"`
+	Color         int    `json:"color"`
+	OverrideColor int    `json:"overrideColor"`
+	IsForced      bool   `json:"isForced"`
 }
 
 type ledConfig struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 	Leds    []Led  `json:"leds"`
-}
-
-type ledStatus struct {
-	Id     string `json:"id"`
-	Status string `json:"status"`
 }
 
 type Response struct {
@@ -34,11 +33,14 @@ type Response struct {
 type Leds struct {
 	stream *serial.Port
 
+	// err is a channel which will make Run to return an error.
+	err chan error
+
 	message     chan Response
-	done        chan struct{}
 	initialized chan struct{}
 
-	Leds []Led
+	ledStatusMutex sync.RWMutex
+	ledStatus      []Led
 }
 
 func OpenLeds(device string) (*Leds, error) {
@@ -56,7 +58,7 @@ func OpenLeds(device string) (*Leds, error) {
 	leds.stream = stream
 
 	leds.message = make(chan Response, 10)
-	leds.done = make(chan struct{})
+	leds.err = make(chan error)
 	leds.initialized = make(chan struct{})
 	go leds.handleMessage()
 	go leds.listen()
@@ -65,9 +67,12 @@ func OpenLeds(device string) (*Leds, error) {
 	return leds, checkpoint.From(err)
 }
 
-func (l *Leds) Wait() {
-	<-l.done
+// Run will block until an error occurs.
+// The error will never be nil.
+func (l *Leds) Run() error {
+	err := <-l.err
 	l.close()
+	return err
 }
 
 func (l *Leds) close() {
@@ -138,7 +143,7 @@ func (l *Leds) handleMessage() {
 		}
 
 		switch msg.Type {
-		case "hello":
+		case "status":
 			cfg := &ledConfig{}
 			err := json.Unmarshal([]byte(msg.Msg), cfg)
 			if err != nil {
@@ -146,15 +151,29 @@ func (l *Leds) handleMessage() {
 				continue
 			}
 			fmt.Printf("received config: %v\n", cfg)
-			l.Leds = cfg.Leds
+
+			l.ledStatusMutex.Lock()
+			l.ledStatus = cfg.Leds
+			l.ledStatusMutex.Unlock()
+
 			close(l.initialized)
 		case "set":
-			status := &ledStatus{}
+			status := &Led{}
 			err := json.Unmarshal([]byte(msg.Msg), status)
 			if err != nil {
 				fmt.Printf("could not parse led status: %v\n", err)
 				continue
 			}
+
+			l.ledStatusMutex.Lock()
+			for i, led := range l.ledStatus {
+				if led.Id == status.Id {
+					l.ledStatus[i] = *status
+					break
+				}
+			}
+			l.ledStatusMutex.Unlock()
+
 			fmt.Println("set", status)
 		default:
 			fmt.Printf("unknown message type: %v\n", msg.Type)
@@ -163,10 +182,16 @@ func (l *Leds) handleMessage() {
 }
 
 func (l *Leds) hello() error {
-	return l.Send("hello\n")
+	return l.Send("status\n")
 }
 
 func (l *Leds) Send(cmd string) error {
+	// TODO: change that the send blocks until it got an OK or ERR response. (with timeout!)
+	// Return that response.
+	// Also use a mutex to avoid concurrent writes.
+
+	fmt.Print("sending message: ", cmd)
+
 	_, err := l.stream.Write([]byte(cmd))
 	if err != nil {
 		return checkpoint.From(err)
@@ -174,7 +199,15 @@ func (l *Leds) Send(cmd string) error {
 	return checkpoint.From(l.stream.Flush())
 }
 
-func (l *Leds) SetColor(name string, r, g, b int) error {
+func (l *Leds) GetStatus() ([]Led, error) {
+	l.ledStatusMutex.RLock()
+	defer l.ledStatusMutex.RUnlock()
+
+	return l.ledStatus, nil
+}
+
+func (l *Leds) SetLed(led Led) error {
+
 	// TODO: communicate with json
-	return l.Send(fmt.Sprintf("%v %x%x%x\n", name, r, g, b))
+	return l.Send(fmt.Sprintf("%v %x\n", led.Id, led.Color))
 }
